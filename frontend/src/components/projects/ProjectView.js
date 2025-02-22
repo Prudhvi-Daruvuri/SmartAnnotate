@@ -92,6 +92,27 @@ const ProjectView = () => {
   const [selectedDocuments, setSelectedDocuments] = useState([]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showDeleteProjectDialog, setShowDeleteProjectDialog] = useState(false);
+  const [page, setPage] = useState(1);
+  const [docsPerPage, setDocsPerPage] = useState(5);
+  const [totalPages, setTotalPages] = useState(1);
+
+
+  const handleNext = () => {
+    if (page < totalPages) setPage((prevPage) => prevPage + 1);
+  };
+
+  const handlePrev = () => {
+    if (page > 1) {
+      setPage((prevPage) => prevPage - 1);
+    };
+  };
+
+
+  const handlePageLimitChange = (event) => {
+    const newLimit = parseInt(event.target.value, 10);
+    setDocsPerPage(newLimit);
+    setPage(1); // Reset to first page when changing docsPerPage
+  };
 
   useEffect(() => {
     let isSubscribed = true;
@@ -101,15 +122,17 @@ const ProjectView = () => {
         setLoading(true);
         const [projectData, documentsData] = await Promise.all([
           getProject(projectId),
-          getProjectDocuments(projectId, { skip: 0, limit: -1 }) // Fetch all documents
+          getProjectDocuments(projectId, { page: page, docsPerPage: docsPerPage }) // Fetch all documents
         ]);
 
         if (isSubscribed) {
+          const { total_count, documents } = documentsData;
+          setTotalPages(Math.ceil(total_count / docsPerPage));
           setProject(projectData);
           setEditedProject(projectData);
-          setDocuments(documentsData);
-          console.log('Loaded documents:', documentsData.length);
+          setDocuments(documents);
         }
+        console.log("Documents:", documents, typeof documents);
       } catch (error) {
         console.error('Error fetching data:', error);
         if (isSubscribed) {
@@ -129,20 +152,21 @@ const ProjectView = () => {
     return () => {
       isSubscribed = false;
     };
-  }, [projectId]);
+  }, [projectId,page,docsPerPage]);
 
   const refreshData = async () => {
     try {
       setLoading(true);
       const [projectData, documentsData] = await Promise.all([
         getProject(projectId),
-        getProjectDocuments(projectId, { skip: 0, limit: -1 }) // Fetch all documents
+        getProjectDocuments(projectId, { page: page, docsPerPage: docsPerPage }) // Fetch all documents
       ]);
+      const { total_count, documents } = documentsData;
 
       setProject(projectData);
       setEditedProject(projectData);
-      setDocuments(documentsData);
-      console.log('Refreshed documents:', documentsData.length);
+      setDocuments(documents);
+      setTotalPages(Math.ceil(total_count / docsPerPage));
     } catch (error) {
       console.error('Error refreshing data:', error);
       toast.error('Failed to refresh project data');
@@ -539,6 +563,16 @@ const ProjectView = () => {
               <Typography variant="body2" sx={{ ml: 1 }}>
                 Select All
               </Typography>
+              <Box display="flex" justifyContent="flex-end" flexGrow={1} gap={1}>
+                <label htmlFor="documentLimit" style={{ fontSize: '18px' }}>Documents per page:</label>
+                <select name="documentLimit" id="documentLimit" value={docsPerPage} onChange={handlePageLimitChange} style={{padding: '8px 12px', fontSize: '16px',borderRadius: '8px',border: '1px solid #1976d2', backgroundColor: 'white',color: '#1976d2', cursor: 'pointer',outline: 'none', transition: 'all 0.3s ease', appearance: 'none'}}>
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="15">15</option>
+                </select>
+                <Button variant="outlined" onClick={handlePrev}>Prev</Button>
+                <Button variant="outlined" onClick={handleNext}>Next</Button>
+              </Box>
             </Box>
             <Grid container spacing={3}>
               {documents.map((doc) => (

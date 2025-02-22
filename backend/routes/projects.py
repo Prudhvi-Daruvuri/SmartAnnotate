@@ -7,7 +7,7 @@ from config.database import projects_collection, documents_collection
 from bson import ObjectId
 from datetime import datetime
 from typing import List, Dict, Any, Optional
-import logging
+
 
 router = APIRouter()
 
@@ -73,10 +73,11 @@ async def get_project(project_id: str, current_user = Depends(get_current_user))
 @router.get("/{project_id}/documents")
 async def get_project_documents(
     project_id: str,
-    skip: int = 0,
-    limit: int = 10,
+    page: int = 1,
+    docsPerPage: int = 5,
     current_user = Depends(get_current_user)
 ):
+    
     # First verify the project exists and belongs to the user
     project = projects_collection.find_one({
         "_id": ObjectId(project_id),
@@ -87,8 +88,11 @@ async def get_project_documents(
         raise HTTPException(status_code=404, detail="Project not found")
     
     # Get documents for the project
+    skip = (page - 1) * docsPerPage
+
+    cursor = documents_collection.find({"project_id": project_id}).skip(skip).limit(docsPerPage)
     documents = []
-    cursor = documents_collection.find({"project_id": project_id}).skip(skip).limit(limit)
+    
     
     for doc in cursor:
         doc["id"] = str(doc.pop("_id"))

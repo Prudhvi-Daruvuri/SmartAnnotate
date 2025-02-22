@@ -110,14 +110,14 @@ export const uploadDocument = async (projectId, files) => {
   }
 };
 
-export const getProjectDocuments = async (projectId, params = { skip: 0, limit: -1 }) => {
+export const getProjectDocuments = async (projectId, params = { page: 1, docsPerPage: 5 }) => {
   try {
     console.log('Fetching documents with params:', params);
     const url = `${API_URL}/documents/project/${projectId}`;  
     const response = await axios.get(url, {
       params: {
-        skip: params.skip,
-        limit: params.limit
+        page: params.page,
+        docsPerPage: params.docsPerPage
       }
     });
     console.log(`Fetched ${response.data.length} documents from ${url}`);

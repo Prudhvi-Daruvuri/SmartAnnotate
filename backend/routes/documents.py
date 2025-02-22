@@ -4,8 +4,9 @@ from utils.auth import get_current_user
 from config.database import documents_collection, projects_collection
 from bson import ObjectId
 from datetime import datetime
-from typing import List
+from typing import List, Dict, Any
 import json
+
 
 router = APIRouter()
 
@@ -134,14 +135,15 @@ async def upload_document(
             detail=f"Error uploading documents: {str(e)}"
         )
 
-@router.get("/project/{project_id}", response_model=List[Document])
+@router.get("/project/{project_id}", response_model=Dict[str, Any])
 async def get_project_documents(
     project_id: str,
     current_user = Depends(get_current_user),
-    skip: int = 0,
-    limit: int = 100  # Default limit of 100, but can be overridden
+    page: int = 1,
+    docsPerPage: int = 100,  # Default limit of 100, but can be overridden
 ):
-    print(f"Fetching documents for project {project_id} with skip={skip}, limit={limit}")
+    skip = (page - 1) * docsPerPage
+    print(f"Fetching documents for project {project_id} with skip={skip}, docsPerPage={docsPerPage}")
     
     try:
         # Verify project exists and belongs to user
@@ -161,7 +163,7 @@ async def get_project_documents(
         print(f"Total documents in project: {total_count}")
         
         # Get all documents for this project
-        cursor = documents_collection.find({"project_id": project_id_str})
+        cursor = documents_collection.find({"project_id": project_id_str}).sort("created_at", -1).skip(skip).limit(docsPerPage)
         
         # Convert documents to list and process them
         documents = []
@@ -193,16 +195,16 @@ async def get_project_documents(
                 continue
         
         # Sort documents by created_at in descending order
-        documents.sort(key=lambda x: x.created_at, reverse=True)
+        # documents.sort(key=lambda x: x.created_at, reverse=True)
         
         # Apply pagination if needed
-        if limit > 0:
-            start = skip
-            end = skip + limit
-            documents = documents[start:end]
+        # if limit > 0:
+        #     start = skip
+        #     end = skip + limit
+        #     documents = documents[start:end]
         
         print(f"Returning {len(documents)} documents")
-        return documents
+        return {"total_count": total_count, "documents": documents}
         
     except Exception as e:
         print(f"Error in get_project_documents: {str(e)}")
@@ -302,7 +304,6 @@ async def bulk_delete_documents(request: Request):
     try:
         data = await request.json()
         document_ids = data.get('document_ids', [])
-        
         if not document_ids:
             raise HTTPException(status_code=400, detail="No document IDs provided")
 
