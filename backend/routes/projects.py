@@ -7,7 +7,7 @@ from config.database import projects_collection, documents_collection
 from bson import ObjectId
 from datetime import datetime
 from typing import List, Dict, Any, Optional
-import logging
+
 
 router = APIRouter()
 
@@ -70,31 +70,35 @@ async def get_project(project_id: str, current_user = Depends(get_current_user))
     project["id"] = str(project.pop("_id"))
     return Project(**project)
 
-@router.get("/{project_id}/documents")
-async def get_project_documents(
-    project_id: str,
-    skip: int = 0,
-    limit: int = 10,
-    current_user = Depends(get_current_user)
-):
-    # First verify the project exists and belongs to the user
-    project = projects_collection.find_one({
-        "_id": ObjectId(project_id),
-        "user_id": str(current_user["_id"])
-    })
+# @router.get("/{project_id}/documents")
+# async def get_project_documents(
+#     project_id: str,
+#     page: int = 1,
+#     docsPerPage: int = 5,
+#     current_user = Depends(get_current_user)
+# ):
     
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+#     # First verify the project exists and belongs to the user
+#     project = projects_collection.find_one({
+#         "_id": ObjectId(project_id),
+#         "user_id": str(current_user["_id"])
+#     })
     
-    # Get documents for the project
-    documents = []
-    cursor = documents_collection.find({"project_id": project_id}).skip(skip).limit(limit)
+#     if not project:
+#         raise HTTPException(status_code=404, detail="Project not found")
     
-    for doc in cursor:
-        doc["id"] = str(doc.pop("_id"))
-        documents.append(doc)
+#     # Get documents for the project
+#     skip = (page - 1) * docsPerPage
+
+#     cursor = documents_collection.find({"project_id": project_id}).skip(skip).limit(docsPerPage)
+#     documents = []
     
-    return documents
+    
+#     for doc in cursor:
+#         doc["id"] = str(doc.pop("_id"))
+#         documents.append(doc)
+    
+    
 
 @router.get("/{project_id}/export")
 async def export_project(project_id: str, current_user = Depends(get_current_user)):
